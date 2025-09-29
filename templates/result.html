@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Audio Transcript Live</title>
+<style>
+    body {
+        font-family: sans-serif;
+        background-color: #2e4d13;
+        background-image: url('{{ url_for("static", filename="images/Background_image.svg") }}');
+        background-size: cover;
+        color: #0f172a;
+        padding: 1.5rem;
+    }
+
+    h1, p{
+        color: white;
+        font-family: "inter", sans-serif;
+    }
+
+    .container {
+        max-width: 1024px;
+        margin: 0 auto;
+        display: grid;
+        gap: 20px;
+    }
+
+    .header {
+        text-align: center;
+        margin-bottom: 1.5rem;
+    }
+
+    .progress-container {
+        width: 100%;
+        background: #e2e8f0;
+        border-radius: 9999px;
+        height: .5rem;
+        margin-top: .25rem;
+        overflow: hidden;
+    }
+
+    .progress-fill {
+        background: #3b82f6;
+        height: 100%;
+        width: 0%;
+        transition: width 0.1s;
+    }
+
+    .transcript-section {
+        background: #fff;
+        padding: 1rem;
+        border-radius: .5rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, .1);
+    }
+
+    .speaker-labels {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+        margin-bottom: 1rem;
+    }
+
+    .speaker-label {
+        display: flex;
+        align-items: center;
+        gap: .5rem;
+        background: rgba(148, 163, 184, .5);
+        padding: .25rem .5rem;
+        border-radius: 9999px;
+    }
+
+    .transcript-content {
+        display: flex;
+        flex-direction: column;
+        gap: .5rem;
+        max-height: 400px;
+        overflow-y: auto;
+    }
+
+    .transcript-segment {
+        background: rgba(148, 163, 184, .2);
+        padding: .5rem;
+        border-radius: .5rem;
+        border: 1px solid #e2e8f0;
+        transition: background 0.2s;
+    }
+
+    .transcript-segment.active {
+        background: rgba(59, 130, 246, .2);
+    }
+
+    .combined-transcript {
+        margin-top: 1rem;
+        background: rgba(59, 130, 246, .1);
+        padding: .5rem;
+        border-radius: .5px;
+    }
+
+    #countdownContainer{
+       
+    background: rgba(255, 255, 255, 0.2); /* putih transparan */
+    backdrop-filter: blur(10px);          /* efek blur */
+    -webkit-backdrop-filter: blur(10px);  /* support Safari */
+    border: 1px solid rgba(255, 255, 255, 0.3); /* border tipis transparan */
+    border-radius: 16px;                  /* sudut membulat */
+    box-shadow: 0 4px 30px rgba(0,0,0,0.1); /* bayangan lembut */
+    padding: 1rem;                        /* jarak isi */
+    color: #000;                           /* warna teks */
+    }
+
+</style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>Live Audio Transcript</h1>
+        <p>{{ filename }}</p>
+    </div>
+
+    <div class="audio-player">
+        <div class="progress-container">
+            <div class="progress-fill" id="progressFill"></div>
+        </div><br>
+        <audio id="audioPlayer" controls>
+            <source src="{{ file_url }}">
+            Browser Anda tidak mendukung audio.
+        </audio>
+    </div>
+
+    <div id="countdownContainer">
+        <strong>File akan terhapus dalam:</strong>
+        <span id="countdown">120</span> 
+        <p>File yg anda masukan akan otomatis terhapus jika countdown ini telah selesai, sehingga audio player tidak bisa memutar file anda lagi dan tidak tersimpan di server ini</p>
+    </div>
+
+    <div class="transcript-section">
+        <div class="speaker-labels" id="speakerLabels"></div>
+        <div class="transcript-content" id="transcriptContent"></div>
+        <div class="combined-transcript" id="combinedTranscript"><strong>Gabungan:</strong> </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    let processedSegments = 0;
+    let totalSegments = Math.ceil(Number("{{ audio_duration }}") / 60); 
+
+    const progressFill = document.getElementById("progressFill");
+    const speakerLabels = document.getElementById("speakerLabels");
+    const transcriptContent = document.getElementById("transcriptContent");
+    const combinedTranscript = document.getElementById("combinedTranscript");
+
+    // EventSource untuk streaming transkrip
+    const evtSource = new EventSource("/stream_transcribe/{{ filename }}");
+
+    evtSource.onmessage = function(e) {
+        const data = e.data.split("|");
+        const [timestamp, speaker, text, combined] = data;
+
+        if (timestamp === "FINISHED") {
+            progressFill.parentElement.innerHTML = '<h2 style="display:flex; justify-content:center;">SELESAI</h2>';
+            evtSource.close();
+
+            // Mulai countdown 2 menit setelah transkrip selesai
+            startCountdown();
+            return;
+        }
+
+        processedSegments++;
+        if (totalSegments > 0) {
+            const progressPercent = (processedSegments / totalSegments) * 100;
+            progressFill.style.width = progressPercent + "%";
+        }
+
+        if (![...speakerLabels.children].some(el => el.textContent.trim() === speaker.trim())) {
+            const div = document.createElement("div");
+            div.className = "speaker-label";
+            div.textContent = speaker;
+            speakerLabels.appendChild(div);
+        }
+
+        [...transcriptContent.children].forEach(el => el.classList.remove("active"));
+        const segmentDiv = document.createElement("div");
+        segmentDiv.className = "transcript-segment active";
+        segmentDiv.innerHTML = `<strong>${speaker}</strong> [${timestamp}]: ${text}`;
+        transcriptContent.appendChild(segmentDiv);
+        transcriptContent.scrollTo({ top: transcriptContent.scrollHeight, behavior: "smooth" });
+
+        combinedTranscript.innerHTML = `<strong>Gabungan:</strong> ${combined}`;
+    };
+
+    evtSource.onerror = function(err) {
+        console.error("EventSource gagal:", err);
+        evtSource.close();
+    };
+
+    // Fungsi countdown, dipanggil setelah transkrip selesai
+    function startCountdown() {
+        let countdownElement = document.getElementById("countdown");
+        let countdownTime = 120; // 2 menit
+
+        let countdownInterval = setInterval(() => {
+            countdownTime--;
+            if (countdownTime <= 0) {
+                clearInterval(countdownInterval);
+                countdownElement.textContent = "File telah terhapus";
+
+                // Panggil server untuk hapus file
+                fetch("/delete_file/{{ filename }}", { method: "POST" });
+            } else {
+                countdownElement.textContent = countdownTime;
+            }
+        }, 1000);
+    }
+});
+</script>
+
+</body>
+</html>

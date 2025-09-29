@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Transcript audio system">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/Logo-Transkrip.png') }}">
+    <title>Upload & Transkrip Audio</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            background-color: #2a3244;
+            background-image: url('{{ url_for("static", filename="images/Background_image.svg") }}');
+            background-size: cover ;
+            animation: wave 5s ease-in-out infinite alternate;
+            flex-direction: column;
+        }
+        h1 {
+            color: #D2D5DA;
+            font-size: 40px;
+        }
+        h2{
+            color: #D2D5DA;
+            
+        }
+        p{
+            color: #D2D5DA;
+            font-size: 18px;
+        }
+        .container{
+            animation: fade 3s ease;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            padding-top: 60px;
+            gap: 80px;
+            width: 100%;
+        }
+        .layoutStar{
+            width: calc(100% + 40px); 
+            height: calc(100% + 80px); 
+            position: absolute;
+            text-align: end;
+            z-index: -1;
+            transition: transform 1s ease;
+            
+        }
+        .star{
+            transition: transform 1s ease;
+            animation: rotate 3s ease;
+        }
+        #uploadArea:hover .star,
+        #uploadedFile:hover .star{
+            transform: rotate(360deg) scale(1.3);
+        }
+
+        #uploadArea:hover,
+        #uploadedFile:Hover{
+            transform: scale(1.1);
+            background-position: right bottom;
+
+
+        }
+        
+
+        #uploadArea,
+        #uploadedFile{
+            text-align: center;
+            display: grid;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            background: linear-gradient(
+                135deg,
+                rgba(255,255,255,0.1) 0%,
+                rgba(255,255,255,0.1) 25%,
+                rgba(255,255,255,0.6) 50%,
+                rgba(255,255,255,0.1) 75%,
+                rgba(255,255,255,0.1) 100%
+            );
+            background-size: 200% 200%;   /* penting biar bisa digeser */
+            background-position: left top;/* posisi awal */
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 16px;
+            box-shadow: 0 4px 30px rgba(0,0,0,0.1);
+            padding: 1rem;
+            width: 400px;
+            height: fit-content;
+            transition: all 0.5s ease;
+            animation: shiny 1s ease;
+            
+        }
+        .photoMic{
+            border-radius: 16px; 
+            width: 400px; 
+            height: auto;
+        }
+        
+        #uploadedFile{
+            display: none;
+            transition: all 1s ease;
+            
+        }
+
+        button {
+            padding: 8px 16px;
+            background: #40302E;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 50px;
+            width: 250px;
+            height: 60px;
+            font-size: 25px;
+            transition: all 0.5s ease;
+        }
+        button:hover,
+        .back:hover {
+            background: #45a049;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+            transform: scale(1.1);
+
+        }
+        .blog{
+            border: 0px solid black;
+            height: fit-content;
+            width: 400px;
+            padding: 20px;
+            background: #40302E;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+            border-radius: 16px;
+        }
+        .emoji1{
+            background-color: #2a3244; 
+            height: 50px; 
+            width: 50px; 
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .blog:hover .emoji1{
+            animation: jiggle 1s ease ;
+            transition: all 1s ease;
+        }
+        .back {
+            padding: 8px 16px;
+            background: #40302E;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 50px;
+            width: 150px;
+            height: 40px;
+            font-size: 20px;
+            transition: all 0.5s ease;
+            display: flex;
+            align-items: center;
+        }
+        .copyright{
+            width: 100%;
+            height: 80px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #40302E;
+            border-top-left-radius: 24px;
+            border-top-right-radius: 24px;
+        }
+        .audio-player {
+            width: 340px;
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 10px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Style default audio */
+        audio {
+            width: 100%;
+            height: 50px;
+            outline: none;
+            border-radius: 10px;
+        }
+
+        /* Hilangkan border default */
+        audio::-webkit-media-controls-panel {
+            background: linear-gradient(135deg, #40302E);
+            border-radius: 12px;
+            color: white;
+        }
+
+        /* Tombol play/pause */
+        audio::-webkit-media-controls-play-button {
+            background-color: rgba(255,255,255,0.3);
+            border-radius: 50%;
+            transform: scale(1.2);
+            right: 6px;
+        }
+
+        /* Progress bar */
+        audio::-webkit-media-controls-timeline {
+            background-color: rgba(255,255,255,0.3);
+            border-radius: 10px;
+        }
+
+        /* Current time dan durasi */
+        audio::-webkit-media-controls-current-time-display,
+        audio::-webkit-media-controls-time-remaining-display {
+            color: white;
+            font-family: "Poppins", sans-serif;
+        }
+
+        /* ---------------------------------- Keyframes Section -------------------------------------------  */
+        @keyframes shiny{
+            from {background-position: right bottom; transform: scale(1.1);}
+            to {background-position: left top}
+        }
+         @keyframes jiggle {
+            0%   { transform:scale(1) rotate(0deg); }
+            25%  { transform:scale(1.5) rotate(10deg); }
+            50%  { transform:scale(1.5) rotate(-10deg); }
+            75%  { transform:scale(1.5) rotate(10deg); }
+            100% { transform:scale(1) rotate(0deg); }
+        }
+        @keyframes rotate{
+            from {transform: rotate(360deg);}
+            to {transform: rotate(0deg);}
+        }
+        @keyframes fade{
+            from {transform: translateY(50px);opacity: 0;}
+            to {transform: translateY(0px);opacity: 1;}
+        }
+        @keyframes wave{
+            from {background-position: 0 0;}
+            to {background-position: 50% 100%;}
+        }
+        /* ----------------------------------------- Media Section ----------------------------------------- */
+        @media (max-width: 640px){
+            h1{
+                font-size: 25px;
+            }
+            p{
+                font-size: 12px;
+            }
+            .container{
+                gap: 50px;
+                padding-top: 30px;
+                flex-direction: column;
+            }
+            .photoMic{
+                width: 250px;
+            }
+            .blog{
+                width: 250px;
+            }
+            #uploadArea,
+            #uploadedFile{
+                width: 250px;
+
+                
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="blog">
+            <div class="emoji1">
+                <h2>🎙️</h2>
+            </div>
+            <h1>WELCOME TO TRANSCRIPT AUDIO</h1>
+            <p>Support: MP3, AIFF, ALAC, M4A, WMA, AMR, FLAC, dan OGG </p>
+            <p>Language: Bahasa Indonesia</p>
+            <img src="{{ url_for('static', filename='images/mic.jpg') }}" class="photoMic" alt="photoMic">
+        </div>
+    
+        <form action="/transcribe" method="post" enctype="multipart/form-data">
+    
+            <div id="uploadArea">
+                <div class="layoutStar"><img src="{{ url_for('static', filename='images/plus.png') }}" class="star"
+                        style="width: 100px;"></div>
+                <h1 id="uploadText">Upload an audio to start transcribing</h1>
+                <input type="file" id="file" name="file" accept="audio/*" style="display: none;">
+    
+                <div style="width: 100%; display: flex; justify-content: center;">
+                    <button type="button" onclick="document.getElementById('file').click();">Upload Audio</button>
+                </div>
+                <p>Drop a file or paste the <u>audio</u></p>
+            </div>
+    
+    
+            <div id="uploadedFile">
+                <div style="width: 100%; display: flex;"><div onclick="document.getElementById('file').click();" class="back"> &lt; Change Audio</div></div><br><br>
+                <img src="{{ url_for('static', filename='images/plus.png') }}" class="star" style="width: 100px;">
+                <h1><strong>File terupload:</strong></h1>
+                <h2><span id="fileName"></span></h2>
+                <input type="file" id="file2" name="file" accept="audio/*" style="display: none;">
+                <div style="width: 100%; display: flex; justify-content: center; padding-bottom: 20px;">
+                    <div class="audio-player">
+                        <audio id="audioPlayer" controls>
+                            <source src="{{ file_url }}">
+                            Browser Anda tidak mendukung audio.
+                        </audio>
+                    </div>
+                </div>
+                <button type="submit">Transcript Audio</button><div style="padding: 10px;"></div>
+
+            </div>
+        </form>
+    
+        <div class="copyright">
+            <p>© Build by Arza Maulana Zafar</p>
+        </div>
+    </div>
+
+    <script>
+        const uploadArea = document.getElementById("uploadArea");
+        const fileInput = document.getElementById("file");
+        const uploadedFileDiv = document.getElementById("uploadedFile");
+        const fileNameSpan = document.getElementById("fileName");
+        const uploadText = document.getElementById("uploadText");
+
+        // Drag & Drop
+        uploadArea.addEventListener("dragover", (e) => {
+            e.preventDefault();
+            uploadArea.style.backgroundColor = "#e0f2fe"; // highlight saat drag
+        });
+        uploadArea.addEventListener("dragleave", (e) => {
+            e.preventDefault();
+            uploadArea.style.backgroundColor = "";
+        });
+        uploadArea.addEventListener("drop", (e) => {
+            e.preventDefault();
+            uploadArea.style.backgroundColor = "";
+            handleFiles(e.dataTransfer.files);
+        });
+
+        // Paste dari clipboard
+        document.addEventListener("paste", (e) => {
+            const files = e.clipboardData.files;
+            if (files.length > 0) {
+                handleFiles(files);
+            }
+        });
+
+        // Pilihan file dari browse
+        fileInput.addEventListener("change", () => handleFiles(fileInput.files));
+        function handleFiles(files) {
+            if (files.length === 0) return;
+            const file = files[0];
+
+            // tampilkan nama file
+            fileNameSpan.textContent = file.name;
+            uploadedFileDiv.style.display = "block";
+            uploadArea.style.display = "none";
+
+            // update audio player
+            const audioPlayer = document.getElementById("audioPlayer");
+            audioPlayer.src = URL.createObjectURL(file);
+            audioPlayer.load();
+
+            // Set the file input for form submission
+            const fileInput2 = document.getElementById("file2");
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(file);
+            fileInput2.files = dataTransfer.files;
+
+            // Ensure only file2 is used for submission
+            fileInput2.name = "file";
+            fileInput.name = "";
+        }
+        
+
+
+
+    </script>
+</body>
+
+</html>
